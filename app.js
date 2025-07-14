@@ -34,7 +34,10 @@ app.post("/incoming-call", (req, res) => {
   const { VoiceResponse } = twilio.twiml;
   const response = new VoiceResponse();
 
-  response.say({ voice: "alice" }, "Welcome to our Australia store!");
+  response.say(
+    { voice: "alice" },
+    "Hello and welcome to our Australia store! We're delighted to have you call us today. Please hold while we connect your call."
+  );
   response.pause({ length: 2 });
 
   const dial = response.dial({
@@ -63,7 +66,7 @@ app.post("/handle-call-status", async (req, res) => {
       callStatus === "busy" ||
       callStatus === "failed"
     ) {
-      response.pause({ length: 1 }); // Add a short pause before message
+      response.pause({ length: 2 }); // Add a short pause before message
       response.say(
         { voice: "alice" },
         "Sorry, no one is available to take your call right now. Please visit our website to book an appointment. Goodbye!"
