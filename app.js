@@ -5,6 +5,8 @@ const twilio = require("twilio");
 
 const app = express();
 
+app.use(express.static("public"));
+
 // Parse URL-encoded bodies (for Twilio webhook POSTs)
 app.use(bodyParser.urlencoded({ extended: false }));
 
@@ -34,11 +36,14 @@ app.post("/incoming-call", (req, res) => {
   const { VoiceResponse } = twilio.twiml;
   const response = new VoiceResponse();
 
-  response.say(
-    { voice: "alice" },
-    "Hello and welcome to our Australia store! We're delighted to have you call us today. Please hold while we connect your call."
-  );
-  response.pause({ length: 2 });
+  // response.say(
+  //   { voice: "alice" },
+  //   "Hello and welcome to our Australia store! We're delighted to have you call us today. Please hold while we connect your call."
+  // );
+  //localhost:3000/welcome.mp3
+  response.play("https://twilio-nodejs-y742.onrender.com/welcome.mp3");
+
+  http: response.pause({ length: 2 });
 
   const dial = response.dial({
     timeout: 20,
@@ -67,10 +72,11 @@ app.post("/handle-call-status", async (req, res) => {
       callStatus === "failed"
     ) {
       response.pause({ length: 2 }); // Add a short pause before message
-      response.say(
-        { voice: "alice" },
-        "Sorry, no one is available to take your call right now. Please visit our website to book an appointment. Goodbye!"
-      );
+      // response.say(
+      //   { voice: "alice" },
+      //   "Sorry, no one is available to take your call right now. Please visit our website to book an appointment. Goodbye!"
+      // );
+      response.play("https://twilio-nodejs-y742.onrender.com/sorry.mp3");
 
       if (caller.startsWith("+251")) {
         console.log("⚠️ SMS to Ethiopia may be restricted. Skipping SMS.");
@@ -84,16 +90,18 @@ app.post("/handle-call-status", async (req, res) => {
       }
     } else {
       response.pause({ length: 1 }); // Optional pause before goodbye message
-      response.say({ voice: "alice" }, "Thank you for your call. Goodbye!");
+      // response.say({ voice: "alice" }, "Thank you for your call. Goodbye!");
+      response.play("https://twilio-nodejs-y742.onrender.com/Thankyou2.mp3");
       console.log("✅ Call completed normally");
     }
   } catch (error) {
     console.error("❌ Error in call status handler:", error.message);
     response.pause({ length: 1 });
-    response.say(
-      { voice: "alice" },
-      "Thank you for your call. We encountered an issue, please visit our website for more information. Goodbye!"
-    );
+    // response.say(
+    //   { voice: "alice" },
+    //   "Thank you for your call. We encountered an issue, please visit our website for more information. Goodbye!"
+    // );
+    response.play("https://twilio-nodejs-y742.onrender.com/Thankyou1.mp3");
   }
 
   res.type("text/xml").send(response.toString());
