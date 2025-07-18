@@ -41,7 +41,7 @@ app.post("/incoming-call", (req, res) => {
   //   "Hello and welcome to our Australia store! We're delighted to have you call us today. Please hold while we connect your call."
   // );
   //localhost:3000/welcome.mp3
-  response.play("https://twilio-nodejs-y742.onrender.com/welcome.mp3");
+  response.play("https://twilio-nodejs-y742.onrender.com/welcome-1.wav");
 
   http: response.pause({ length: 2 });
 
@@ -76,7 +76,7 @@ app.post("/handle-call-status", async (req, res) => {
       //   { voice: "alice" },
       //   "Sorry, no one is available to take your call right now. Please visit our website to book an appointment. Goodbye!"
       // );
-      response.play("https://twilio-nodejs-y742.onrender.com/sorry.mp3");
+      response.play("https://twilio-nodejs-y742.onrender.com/soory-1.wav");
 
       if (caller.startsWith("+251")) {
         console.log("⚠️ SMS to Ethiopia may be restricted. Skipping SMS.");
@@ -91,7 +91,7 @@ app.post("/handle-call-status", async (req, res) => {
     } else {
       response.pause({ length: 1 }); // Optional pause before goodbye message
       // response.say({ voice: "alice" }, "Thank you for your call. Goodbye!");
-      response.play("https://twilio-nodejs-y742.onrender.com/Thankyou2.mp3");
+      response.play("https://twilio-nodejs-y742.onrender.com/thank-2.wav");
       console.log("✅ Call completed normally");
     }
   } catch (error) {
@@ -101,7 +101,7 @@ app.post("/handle-call-status", async (req, res) => {
     //   { voice: "alice" },
     //   "Thank you for your call. We encountered an issue, please visit our website for more information. Goodbye!"
     // );
-    response.play("https://twilio-nodejs-y742.onrender.com/Thankyou1.mp3");
+    response.play("https://twilio-nodejs-y742.onrender.com/thank-1.wav");
   }
 
   res.type("text/xml").send(response.toString());
