@@ -13,6 +13,8 @@ app.use(bodyParser.urlencoded({ extended: false }));
 // Ignore favicon requests to reduce noise
 app.get("/favicon.ico", (req, res) => res.status(204).end());
 
+const PORT = process.env.PORT || 3000;
+
 // Your env vars
 const {
   TWILIO_ACCOUNT_SID,
@@ -20,7 +22,6 @@ const {
   TWILIO_NUMBER,
   ADMIN_NUMBER,
   BOOKING_LINK,
-  PORT = 3000,
 } = process.env;
 
 const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
