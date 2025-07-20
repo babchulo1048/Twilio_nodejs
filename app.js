@@ -6,16 +6,10 @@ const twilio = require("twilio");
 const app = express();
 
 app.use(express.static("public"));
-
-// Parse URL-encoded bodies (for Twilio webhook POSTs)
 app.use(bodyParser.urlencoded({ extended: false }));
-
-// Ignore favicon requests to reduce noise
 app.get("/favicon.ico", (req, res) => res.status(204).end());
 
 const PORT = process.env.PORT || 3000;
-
-// Your env vars
 const {
   TWILIO_ACCOUNT_SID,
   TWILIO_AUTH_TOKEN,
@@ -37,31 +31,34 @@ app.post("/incoming-call", (req, res) => {
   const { VoiceResponse } = twilio.twiml;
   const response = new VoiceResponse();
 
-  // response.say(
-  //   { voice: "alice" },
-  //   "Hello and welcome to our Australia store! We're delighted to have you call us today. Please hold while we connect your call."
-  // );
-  //localhost:3000/welcome.mp3
   response.play("https://twilio-nodejs-y742.onrender.com/welcome-1.mp3");
-
-  http: response.pause({ length: 2 });
+  response.pause({ length: 2 });
 
   const dial = response.dial({
     timeout: 20,
     action: "/handle-call-status",
     method: "POST",
+    answerOnBridge: true, // Critical for voicemail detection
+    record: "do-not-record", // Explicitly disable recording
   });
   dial.number(ADMIN_NUMBER);
 
   res.type("text/xml").send(response.toString());
 });
 
-// Handle call status webhook
+// Handle call status webhook - IMPROVED VERSION
 app.post("/handle-call-status", async (req, res) => {
   console.log("📩 Call status webhook payload:", req.body);
 
-  const callStatus = req.body.DialCallStatus;
+  let callStatus = req.body.DialCallStatus;
   const caller = req.body.From || "Unknown";
+  const callDuration = parseInt(req.body.DialCallDuration || "0");
+
+  // Enhanced voicemail/no-answer detection
+  if (callStatus === "completed" && callDuration < 5) {
+    callStatus = "no-answer";
+    console.log("⚠️ Short call duration - treating as no-answer");
+  }
 
   const { VoiceResponse } = twilio.twiml;
   const response = new VoiceResponse();
@@ -70,48 +67,43 @@ app.post("/handle-call-status", async (req, res) => {
     if (
       callStatus === "no-answer" ||
       callStatus === "busy" ||
-      callStatus === "failed"
+      callStatus === "failed" ||
+      (callStatus === "completed" && callDuration < 5)
     ) {
-      response.pause({ length: 2 }); // Add a short pause before message
-      // response.say(
-      //   { voice: "alice" },
-      //   "Sorry, no one is available to take your call right now. Please visit our website to book an appointment. Goodbye!"
-      // );
+      response.pause({ length: 2 });
       response.play("https://twilio-nodejs-y742.onrender.com/soory-1.mp3");
 
-      if (caller.startsWith("+251")) {
-        console.log("⚠️ SMS to Ethiopia may be restricted. Skipping SMS.");
-      } else {
-        await client.messages.create({
-          from: TWILIO_NUMBER,
-          to: caller,
-          body: `Sorry we missed your call! You can book an appointment here: ${BOOKING_LINK}`,
-        });
-        console.log("📤 SMS sent to", caller);
+      // Skip SMS for Ethiopian numbers and potential landlines
+      if (!caller.startsWith("+251") && caller.match(/^\+?[0-9]+$/)) {
+        try {
+          await client.messages.create({
+            from: TWILIO_NUMBER,
+            to: caller,
+            body: `Sorry we missed your call! Book online: ${BOOKING_LINK}`,
+          });
+          console.log("📤 SMS sent to", caller);
+        } catch (smsError) {
+          console.error("❌ SMS failed:", smsError.message);
+        }
       }
     } else {
-      response.pause({ length: 1 }); // Optional pause before goodbye message
-      // response.say({ voice: "alice" }, "Thank you for your call. Goodbye!");
+      response.pause({ length: 1 });
       response.play("https://twilio-nodejs-y742.onrender.com/thank-2.mp3");
-      console.log("✅ Call completed normally");
+      console.log("✅ Call completed successfully");
     }
   } catch (error) {
     console.error("❌ Error in call status handler:", error.message);
     response.pause({ length: 1 });
-    // response.say(
-    //   { voice: "alice" },
-    //   "Thank you for your call. We encountered an issue, please visit our website for more information. Goodbye!"
-    // );
     response.play("https://twilio-nodejs-y742.onrender.com/thank-1.mp3");
   }
 
   res.type("text/xml").send(response.toString());
 });
 
-// Catch aborted requests gracefully
+// Error handling
 app.use((err, req, res, next) => {
   if (err.type === "entity.aborted") {
-    console.warn("⚠️ Request aborted prematurely (likely client disconnect)");
+    console.warn("⚠️ Request aborted (client disconnect)");
     return res.status(400).send("Request aborted");
   }
   console.error(err.stack);
